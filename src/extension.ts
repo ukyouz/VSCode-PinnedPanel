@@ -35,7 +35,7 @@ export class PinnedFilesProvider implements vscode.TreeDataProvider<FileNode> {
 		const tabArray = vscode.window.tabGroups.all[0].tabs;
 
 		return tabArray.filter(t => t.isPinned).map(t =>
-			new FileNode(t.label, path.dirname(t.input.uri.fsPath), vscode.TreeItemCollapsibleState.None, t)
+			new FileNode(t.label, path.dirname((t.input as vscode.TabInputText).uri.fsPath), vscode.TreeItemCollapsibleState.None, t)
 		);
 	}
 
