@@ -1,49 +1,54 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import * as path from 'path';
 
 
 class FileNode extends vscode.TreeItem {
-    constructor(
-        public readonly label: string,
-        private detail: string,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState,
+	constructor(
+		public readonly label: string,
+		private folder: string,
+		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
 		public readonly tab: any,
-    ) {
-        super(label, collapsibleState);
-        this.tooltip = `${this.label}-${this.detail}`;
-        this.description = this.detail;
+	) {
+		super(label, collapsibleState);
+		this.tooltip = path.join(this.folder, label);
+		this.description = this.folder;
 		this.tab = tab;
-    }
+	}
 
-    // iconPath = {
-    //     light: path.join(__filename, '..', '..', 'resources', 'light', 'dependency.svg'),
-    //     dark: path.join(__filename, '..', '..', 'resources', 'dark', 'dependency.svg')
-    // };
+	iconPath = new vscode.ThemeIcon('pinned')
 }
 
 
 export class PinnedFilesProvider implements vscode.TreeDataProvider<FileNode> {
 
-    getTreeItem(element: FileNode): vscode.TreeItem {
-        return element;
-    }
+	getTreeItem(element: FileNode): vscode.TreeItem {
+		return element;
+	}
 
-    getChildren(element?: FileNode): vscode.ProviderResult<FileNode[]> {
-
-        return Promise.resolve(this.getPinnedFiles());
-    }
+	getChildren(element?: FileNode): vscode.ProviderResult<FileNode[]> {
+		return Promise.resolve(this.getPinnedFiles());
+	}
 
 	private getPinnedFiles(): FileNode[] {
-		const tabArray = vscode.window.tabGroups.all;
+		const tabArray = vscode.window.tabGroups.all[0].tabs;
 
-		return [
-            new FileNode("xxx", "vvv", vscode.TreeItemCollapsibleState.None, tabArray[0]),
-        ]
+		return tabArray.filter(t => t.isPinned).map(t =>
+			new FileNode(t.label, path.dirname(t.input.uri.fsPath), vscode.TreeItemCollapsibleState.None, t)
+		);
+	}
+
+	private changeEvent = new vscode.EventEmitter<void>();
+
+	public get onDidChangeTreeData(): vscode.Event<void> {
+		return this.changeEvent.event;
+	}
+
+	refresh(): void {
+		this.changeEvent.fire();
 	}
 }
-
-
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -53,24 +58,20 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "helloworld" is now active!');
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	let disposable = vscode.commands.registerCommand('helloworld.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from HelloWorld!');
+	const pinnedProvider = new PinnedFilesProvider()
+	const tree = vscode.window.createTreeView('packagePinnedExplorer', {
+		treeDataProvider: pinnedProvider,
+		showCollapseAll: false
+	});
+	tree.onDidChangeSelection(async e => {
+		let t = e.selection[0].tab;
+		await vscode.window.showTextDocument(t.input.uri);
 	});
 
-	context.subscriptions.push(disposable);
-
-
-	disposable = vscode.window.registerTreeDataProvider(
-		'packagePinnedExplorer',
-		new PinnedFilesProvider(),
-	);
-	context.subscriptions.push(disposable);
+	vscode.window.tabGroups.onDidChangeTabs(unused => {
+		pinnedProvider.refresh();
+	});
 }
 
 // this method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }

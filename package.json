@@ -9,15 +9,19 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+	"activationEvents": [
+	  "onView:packagePinnedExplorer"
+	],
   "main": "./out/extension.js",
   "contributes": {
-    "commands": [
-      {
-        "command": "pinned-panel.helloWorld",
-        "title": "Hello World"
-      }
-    ]
+    "views": {
+      "explorer": [
+        {
+          "id": "packagePinnedExplorer",
+          "name": "Pinned Files"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
