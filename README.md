@@ -1,6 +1,6 @@
 # VSCode - Pinned Panel
 
-A simple extension that give those pinned files a individual view panel.
+A simple extension that give those pinned files an individual view panel.
 
 As simple as that.
 
