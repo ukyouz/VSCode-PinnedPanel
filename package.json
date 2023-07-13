@@ -2,6 +2,7 @@
   "name": "pinned-panel",
   "displayName": "Pinned Panel",
   "description": "Add separate panel for pinned files",
+  "publisher": "ukyouz",
   "repository": {
 	"type": "git",
 	"url": "https://github.com/ukyouz/VSCode-PinnedPanel/tree/main"
