@@ -34,9 +34,16 @@ export class PinnedFilesProvider implements vscode.TreeDataProvider<FileNode> {
 	private getPinnedFiles(): FileNode[] {
 		const tabArray = vscode.window.tabGroups.all[0].tabs;
 
-		return tabArray.filter(t => t.isPinned).map(t =>
-			new FileNode(t.label, path.dirname((t.input as vscode.TabInputText).uri.fsPath), vscode.TreeItemCollapsibleState.None, t)
-		);
+		return tabArray.filter(t => t.isPinned).map(t => {
+			let node = new FileNode(t.label, path.dirname((t.input as vscode.TabInputText).uri.fsPath), vscode.TreeItemCollapsibleState.None, t);
+			// ref: https://www.codingwiththomas.com/blog/typescript-vs-code-api-lets-create-a-tree-view-part-2
+			node.command = {
+				command: 'treenode.on_item_clicked',
+				title : 'open file',
+				arguments: [node.tab],
+			};
+			return node;
+		});
 	}
 
 	private changeEvent = new vscode.EventEmitter<void>();
@@ -56,16 +63,16 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
+	vscode.commands.registerCommand('treenode.on_item_clicked', async tab => {
+		await vscode.window.showTextDocument(tab.input.uri);
+	});
+
 	console.log('Congratulations, your extension "helloworld" is now active!');
 
 	const pinnedProvider = new PinnedFilesProvider()
 	const tree = vscode.window.createTreeView('packagePinnedExplorer', {
 		treeDataProvider: pinnedProvider,
 		showCollapseAll: false
-	});
-	tree.onDidChangeSelection(async e => {
-		let t = e.selection[0].tab;
-		await vscode.window.showTextDocument(t.input.uri);
 	});
 
 	vscode.window.tabGroups.onDidChangeTabs(unused => {
