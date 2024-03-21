@@ -17,9 +17,16 @@ class FileNode extends vscode.TreeItem {
 		this.tab = tab;
 	}
 
-	iconPath = new vscode.ThemeIcon('pinned')
+	iconPath = new vscode.ThemeIcon('pinned');
 }
 
+const otherViewsMap: Record<string, string> = {
+	'Git Graph': 'git-graph.view',
+};
+
+function tabInputHasUri(input: unknown): input is { uri: { fsPath: string } } {
+  return input !== null && typeof input === 'object' && 'uri' in input && typeof input.uri === 'object' && input.uri !== null && 'fsPath' in input.uri;
+}
 
 export class PinnedFilesProvider implements vscode.TreeDataProvider<FileNode> {
 
@@ -34,9 +41,23 @@ export class PinnedFilesProvider implements vscode.TreeDataProvider<FileNode> {
 	private getPinnedFiles(): FileNode[] {
 		const tabArray = vscode.window.tabGroups.all[0].tabs;
 
-		return tabArray.filter(t => t.isPinned).map(t => {
-			let node = new FileNode(t.label, path.dirname((t.input as vscode.TabInputText).uri.fsPath), vscode.TreeItemCollapsibleState.None, t);
-			// ref: https://www.codingwiththomas.com/blog/typescript-vs-code-api-lets-create-a-tree-view-part-2
+		return tabArray.filter(t => t.isPinned).flatMap(t => {
+			let node = (function(){
+				if (tabInputHasUri(t.input)) {
+					return new FileNode(t.label, t.input.uri.fsPath, vscode.TreeItemCollapsibleState.None, t);
+				} else {
+					if (otherViewsMap[t.label]) {
+						return new FileNode(t.label, otherViewsMap[t.label], vscode.TreeItemCollapsibleState.None, t);
+					}
+
+					return null;
+				}
+			}());
+
+			if (node === null) {
+				return [];
+			}
+			
 			node.command = {
 				command: 'treenode.on_item_clicked',
 				title : 'open file',
@@ -64,12 +85,14 @@ export function activate(context: vscode.ExtensionContext) {
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
 	vscode.commands.registerCommand('treenode.on_item_clicked', async tab => {
-		await vscode.window.showTextDocument(tab.input.uri);
+		if (otherViewsMap[tab.label]) {
+			await vscode.commands.executeCommand(otherViewsMap[tab.label]);
+		} else {
+			await vscode.commands.executeCommand('vscode.open', tab.input.uri);
+		}
 	});
 
-	console.log('Congratulations, your extension "helloworld" is now active!');
-
-	const pinnedProvider = new PinnedFilesProvider()
+	const pinnedProvider = new PinnedFilesProvider();
 	const tree = vscode.window.createTreeView('packagePinnedExplorer', {
 		treeDataProvider: pinnedProvider,
 		showCollapseAll: false
