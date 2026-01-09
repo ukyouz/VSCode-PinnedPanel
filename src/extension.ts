@@ -7,17 +7,62 @@ import * as path from 'path';
 class FileNode extends vscode.TreeItem {
 	constructor(
 		public readonly label: string,
-		private folder: string,
+		private filePath: string,
 		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
 		public readonly tab: any,
 	) {
 		super(label, collapsibleState);
-		this.tooltip = path.join(this.folder, label);
-		this.description = this.folder;
+
+		let detail = filePath;
+		if (otherViewsMap[label] == undefined) {
+			// normal file path
+			let folder = searchParentDirectory(filePath);
+			detail = folder["path"];
+			if (folder["name"]) {
+				detail = `[${folder["name"]}] ${folder["path"]}`;
+			}
+		}
+		this.tooltip = filePath;
+		this.description = detail;
 		this.tab = tab;
 	}
 
 	iconPath = new vscode.ThemeIcon('pinned');
+}
+
+function searchParentDirectory(filePath: string) {
+	let workspaces = vscode.workspace.workspaceFolders;
+	let fileDir = path.dirname(filePath);
+	// default is the fullpath of the directory
+	let shortDirectory = {
+		"name": "",
+		"path": fileDir,
+	};
+	if (workspaces) {
+		if (workspaces.length == 1) {
+			// single folder
+			let relpath = path.relative(workspaces[0].uri.path, fileDir);
+			if (!relpath.startsWith("..")) {
+				shortDirectory = {
+					"name": "",
+					"path": relpath,
+				};
+			}
+		} else {
+			// multiple workspaces
+			for (let folder of workspaces) {
+				let relpath = path.relative(folder.uri.path, fileDir);
+				if (!relpath.startsWith("..")) {
+					shortDirectory = {
+						"name": folder.name,
+						"path": relpath,
+					}
+					break;
+				}
+			}
+		}
+	}
+	return shortDirectory;
 }
 
 const otherViewsMap: Record<string, string> = {
@@ -57,7 +102,7 @@ export class PinnedFilesProvider implements vscode.TreeDataProvider<FileNode> {
 			if (node === null) {
 				return [];
 			}
-			
+
 			node.command = {
 				command: 'treenode.on_item_clicked',
 				title : 'open file',
