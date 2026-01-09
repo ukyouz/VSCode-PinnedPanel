@@ -8,4 +8,4 @@ Just list all those builtin pinned tabs. As simple as that.
 
 # Requirement
 
-Make sure the setting ![Workbench > Editor: Show Tabs](vscode://settings/workbench.editor.showTabs) is set to `multiple` or `single`, or you may not able to pin any file to this Pinned Panel.
+Make sure the setting `workbench.editor.showTabs` is set to `multiple` or `single`, or you may not able to pin any file to this Pinned Panel.
